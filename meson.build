@@ -3,6 +3,7 @@ project('adapter-guard', 'c',
 )
 
 libusb = dependency('libusb-1.0', required: true)
+libsystemd = dependency('libsystemd', required: true)
 
 executable('adapter-guard',
   sources: [
@@ -12,6 +13,7 @@ executable('adapter-guard',
   ],
   dependencies: [
     libusb,
+    libsystemd,
   ],
   install: true,
   install_dir: '/usr/bin',
