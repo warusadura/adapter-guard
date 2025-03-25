@@ -1,6 +1,6 @@
 #include "include/adapter-guard.h"
 
-int enumerate_devices(void)
+int list(void)
 {
         sd_device_enumerator *enumerator;
         int ret;

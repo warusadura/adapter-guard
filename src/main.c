@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
         else if (!strcmp(command, VERSION))
                 print_version();
         else if (!strcmp(command, LIST))
-                enumerate_devices();
+                list();
         else if (!strcmp(command, DUMP)) {
                 if (argc != 3) {
                         fprintf(stderr, "Missing device id.\n\n");
