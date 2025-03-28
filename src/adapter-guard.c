@@ -1,30 +1,43 @@
 #include "include/adapter-guard.h"
 
-int list(void)
+sd_device_enumerator *usb_device_enumerator(void)
 {
-        sd_device_enumerator *enumerator;
+        sd_device_enumerator *enumerator = NULL;
         int ret;
 
         ret = sd_device_enumerator_new(&enumerator);
         if (ret < 0) {
                 fprintf(stderr, "Failed to create device enumerator: %s\n", strerror(-ret));
-                return 1;
+                return NULL;
         }
 
         ret = sd_device_enumerator_add_match_subsystem(enumerator, "usb", true);
         if (ret < 0) {
                 fprintf(stderr, "Failed to add match for USB devices: %s\n", strerror(ret));
                 sd_device_enumerator_unref(enumerator);
-                return 1;
+                return NULL;
         }
 
-        // to further filter out
+        /* To further filter out */
         ret = sd_device_enumerator_add_match_property(enumerator, "DEVTYPE", "usb_device");
         if (ret < 0) {
                 fprintf(stderr, "Failed to add match for USB device type: usb_device: %s\n", strerror(ret));
                 sd_device_enumerator_unref(enumerator);
-                return 1;
+                return NULL;
         }
+
+        /* Caller must free this */
+        return enumerator;
+}
+
+int list(void)
+{
+        sd_device_enumerator *enumerator = NULL;
+        int ret;
+
+        enumerator = usb_device_enumerator();
+        if (enumerator == NULL)
+                return 1;
 
         for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
              device = sd_device_enumerator_get_device_next(enumerator)) {
@@ -54,31 +67,13 @@ int list(void)
 
 int dump(char *id)
 {
-        sd_device_enumerator *enumerator;
+        sd_device_enumerator *enumerator = NULL;
         int ret;
-
-        ret = sd_device_enumerator_new(&enumerator);
-        if (ret < 0) {
-                fprintf(stderr, "Failed to create device enumerator: %s\n", strerror(-ret));
-                return 1;
-        }
-
-        ret = sd_device_enumerator_add_match_subsystem(enumerator, "usb", true);
-        if (ret < 0) {
-                fprintf(stderr, "Failed to add match for USB devices: %s\n", strerror(ret));
-                sd_device_enumerator_unref(enumerator);
-                return 1;
-        }
-
-        // To further filter out
-        ret = sd_device_enumerator_add_match_property(enumerator, "DEVTYPE", "usb_device");
-        if (ret < 0) {
-                fprintf(stderr, "Failed to add match for USB device type: usb_device: %s\n", strerror(ret));
-                sd_device_enumerator_unref(enumerator);
-                return 1;
-        }
-
         int counter = 0;
+
+        enumerator = usb_device_enumerator();
+        if (enumerator == NULL)
+                return 1;
 
         for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
              device = sd_device_enumerator_get_device_next(enumerator)) {
@@ -161,7 +156,7 @@ int write_to_file(void) { return 0; }
 
 int print_devices()
 {
-        // depricated - do not use.
+        /* Depricated - do not use */
         libusb_device **devices = NULL;
         libusb_device *device = NULL;
         int ret = 0;
