@@ -19,15 +19,16 @@ int main(int argc, char *argv[])
                 if (argc != 3) {
                         fprintf(stderr, "Missing device id.\n\n");
                         printf("\e[1mUsage:\e[0m adapter-guard %s <id>\n", DUMP);
-                        return -1;
+                        return 1;
                 }
                 dump(argv[2]);
         } else if (!strcmp(command, AUTHENTICATE)) {
                 if (argc != 3) {
                         fprintf(stderr, "Missing device id.\n\n");
                         printf("\e[1mUsage:\e[0m adapter-guard %s <id>\n", AUTHENTICATE);
+                        return 1;
                 }
-                // todo
+                authenticate(argv[2]);
         } else if (!strcmp(command, SCAN)) {
                 if (argc != 3) {
                         fprintf(stderr, "Missing device id.\n\n");

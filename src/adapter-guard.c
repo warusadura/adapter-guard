@@ -152,6 +152,62 @@ int dump(char *id)
         return 0;
 }
 
+int authenticate(char *id)
+{
+        sd_device_enumerator *enumerator = NULL;
+        int ret;
+        int counter = 0;
+
+        enumerator = usb_device_enumerator();
+        if (enumerator == NULL)
+                return 1;
+
+        for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
+             device = sd_device_enumerator_get_device_next(enumerator)) {
+                const char *dev_name = NULL;
+                const char *vendor = NULL;
+                const char *model = NULL;
+                const char *serial = NULL;
+                const char *serial_short = NULL;
+
+                ret = sd_device_get_property_value(device, "DEVNAME", &dev_name);
+                if (ret < 0)
+                        fprintf(stderr, strerror(ret));
+
+                if (strcmp(dev_name, id)) {
+                        continue;
+                }
+
+                counter++;
+
+                printf("\e[1m%s\e[0m\n", dev_name);
+
+                sd_device_get_property_value(device, "ID_MODEL", &model);
+                sd_device_get_property_value(device, "ID_VENDOR_FROM_DATABASE", &vendor);
+                sd_device_get_property_value(device, "ID_SERIAL", &serial);
+                sd_device_get_property_value(device, "ID_SERIAL_SHORT", &serial_short);
+
+                if (vendor && model && serial_short) {
+                        printf("   %s - %s - %s\n", vendor, model, serial_short);
+                        printf("   \e[1mDevice verified as authentic\e[0m\n");
+                } else if (vendor && model && serial) {
+                        printf("   %s - %s - %s\n", vendor, model, serial);
+                        printf("   \e[1mDevice verified as authentic\e[0m\n");
+                } else {
+                        printf("   \e[1mPotentially counterfeit device detected\e[0m\n");
+                }
+        }
+
+        sd_device_enumerator_unref(enumerator);
+
+        if (!counter) {
+                fprintf(stderr, "Invalid ID: %s\n", id);
+                return 1;
+        }
+
+        return 0;
+}
+
 int write_to_file(void) { return 0; }
 
 int print_devices()

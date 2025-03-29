@@ -8,5 +8,6 @@
 int list(void);
 int dump(char *id);
 sd_device_enumerator *usb_device_enumerator(void);
+int authenticate(char *id);
 int read_from_file(void);
 int write_to_file(void);
