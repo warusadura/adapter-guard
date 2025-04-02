@@ -4,6 +4,7 @@
 #define DUMP "dump"
 #define AUTHENTICATE "authenticate"
 #define SCAN "scan"
+#define INIT "init"
 
 void print_help();
 void print_version();

@@ -13,6 +13,8 @@ int main(int argc, char *argv[])
                 print_help();
         else if (!strcmp(command, VERSION))
                 print_version();
+        else if (!strcmp(command, INIT))
+                init();
         else if (!strcmp(command, LIST))
                 list();
         else if (!strcmp(command, DUMP)) {

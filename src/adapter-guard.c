@@ -30,6 +30,88 @@ sd_device_enumerator *usb_device_enumerator(void)
         return enumerator;
 }
 
+int store_built_ins(void)
+{
+        int ret;
+        int size = 5000;
+        char config_dir_path[size];
+        char config_file_path[size];
+
+        char *home = getenv("HOME");
+        snprintf(config_dir_path, size - 1, "%s/%s/%s", home, ".config", "adapter-guard");
+
+        ret = mkdir(config_dir_path, 0777);
+        if (errno == EEXIST) {
+                fprintf(stderr, "%s \e[1malready exists.\e[0m\n", config_dir_path);
+                fprintf(stderr, "Remove %s if it's neccessary to run `init` again.\n", config_dir_path);
+                return 0;
+        }
+        if (ret) {
+                fprintf(stderr, "mkdir: %s\n", strerror(errno));
+                return ret;
+        }
+
+        snprintf(config_file_path, size - 1, "%s/%s", config_dir_path, "devices.list");
+
+        int fd = open(config_file_path, O_CREAT | O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        if (fd < 0) {
+                fprintf(stderr, "open %s\n", strerror(errno));
+                return ret;
+        }
+
+        sd_device_enumerator *enumerator = usb_device_enumerator();
+        if (enumerator == NULL) {
+                close(fd);
+                return 1;
+        }
+
+        for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
+             device = sd_device_enumerator_get_device_next(enumerator)) {
+                const char *serial = NULL;
+                char buffer[size];
+
+                memset(buffer, 0, size);
+
+                ret = sd_device_get_property_value(device, "ID_SERIAL", &serial);
+                if (ret < 0)
+                        fprintf(stderr, "%s\n", strerror(ret));
+                snprintf(buffer, size - 1, "%s\n", serial);
+
+                ret = write(fd, buffer, size);
+                if (ret == -1) {
+                        fprintf(stderr, "write %s\n", strerror(errno));
+                        close(fd);
+                        sd_device_enumerator_unref(enumerator);
+                        return 1;
+                }
+        }
+
+        close(fd);
+        sd_device_enumerator_unref(enumerator);
+
+        printf("Identified built-ins.\n");
+
+        return 0;
+}
+
+int init(void)
+{
+        int ret;
+
+        printf("\e[1mAre all external USB devices detached (y/n):\e[0m ");
+
+        switch (getchar()) {
+        case 121:
+                ret = store_built_ins();
+                break;
+        case 110:
+                printf("Remove all external USB devices and then continue.\n");
+                break;
+        }
+
+        return ret;
+}
+
 int list(void)
 {
         sd_device_enumerator *enumerator = NULL;
@@ -207,8 +289,6 @@ int authenticate(char *id)
 
         return 0;
 }
-
-int write_to_file(void) { return 0; }
 
 int print_devices()
 {
