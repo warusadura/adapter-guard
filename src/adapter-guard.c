@@ -1,5 +1,7 @@
 #include "include/adapter-guard.h"
 
+#define PATH_SIZE 5000
+
 sd_device_enumerator *usb_device_enumerator(void)
 {
         sd_device_enumerator *enumerator = NULL;
@@ -33,12 +35,11 @@ sd_device_enumerator *usb_device_enumerator(void)
 int store_built_ins(void)
 {
         int ret;
-        int size = 5000;
-        char config_dir_path[size];
-        char config_file_path[size];
+        char config_dir_path[PATH_SIZE - 100];
+        char config_file_path[PATH_SIZE];
 
         char *home = getenv("HOME");
-        snprintf(config_dir_path, size - 1, "%s/%s/%s", home, ".config", "adapter-guard");
+        snprintf(config_dir_path, PATH_SIZE - 1, "%s/%s/%s", home, ".config", "adapter-guard");
 
         ret = mkdir(config_dir_path, 0777);
         if (errno == EEXIST) {
@@ -51,9 +52,9 @@ int store_built_ins(void)
                 return ret;
         }
 
-        snprintf(config_file_path, size - 1, "%s/%s", config_dir_path, "devices.list");
+        snprintf(config_file_path, PATH_SIZE - 1, "%s/%s", config_dir_path, "devices.list");
 
-        int fd = open(config_file_path, O_CREAT | O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
+        int fd = open(config_file_path, O_WRONLY | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH);
         if (fd < 0) {
                 fprintf(stderr, "open %s\n", strerror(errno));
                 return ret;
@@ -68,21 +69,12 @@ int store_built_ins(void)
         for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
              device = sd_device_enumerator_get_device_next(enumerator)) {
                 const char *serial = NULL;
-                char buffer[size];
-
-                memset(buffer, 0, size);
 
                 ret = sd_device_get_property_value(device, "ID_SERIAL", &serial);
-                if (ret < 0)
-                        fprintf(stderr, "%s\n", strerror(ret));
-                snprintf(buffer, size - 1, "%s\n", serial);
-
-                ret = write(fd, buffer, size);
-                if (ret == -1) {
-                        fprintf(stderr, "write %s\n", strerror(errno));
-                        close(fd);
-                        sd_device_enumerator_unref(enumerator);
-                        return 1;
+                if (!ret) {
+                        size_t len = strlen(serial);
+                        write(fd, serial, len);
+                        write(fd, "\n", 1);
                 }
         }
 
@@ -92,6 +84,32 @@ int store_built_ins(void)
         printf("Identified built-ins.\n");
 
         return 0;
+}
+
+char *read_from_built_ins(void)
+{
+        char path[PATH_SIZE];
+        FILE *device_file;
+
+        char *home = getenv("HOME");
+        snprintf(path, PATH_SIZE - 1, "%s/%s", home, ".config/adapter-guard/devices.list");
+
+        device_file = fopen(path, "r");
+        if (device_file == NULL)
+                return NULL;
+
+        fseek(device_file, 0, SEEK_END);
+        long size = ftell(device_file);
+        fseek(device_file, 0, SEEK_SET);
+
+        char *buffer = malloc(size);
+        memset(buffer, 0, size);
+
+        fread(buffer, 1, size, device_file);
+
+        fclose(device_file);
+
+        return buffer; /* Caller must free this */
 }
 
 int init(void)
@@ -121,11 +139,39 @@ int list(void)
         if (enumerator == NULL)
                 return 1;
 
+        char *built_ins = read_from_built_ins();
+        if (built_ins == NULL) {
+                sd_device_enumerator_unref(enumerator);
+                fprintf(stderr, "Execute \e[1minit\e[0m command first to identify built-ins.\n");
+                return 1;
+        }
+
         for (sd_device *device = sd_device_enumerator_get_device_first(enumerator); device;
              device = sd_device_enumerator_get_device_next(enumerator)) {
+                const char *serial = NULL;
                 const char *vendor = NULL;
                 const char *model = NULL;
                 const char *path = NULL;
+                bool own = false;
+
+                char *built_ins_copy = strdup(built_ins);
+                /* Tokenize the copy to avoid modifying the original string */
+                char *token = strtok(built_ins_copy, "\n");
+
+                ret = sd_device_get_property_value(device, "ID_SERIAL", &serial);
+                while (token != NULL) {
+                        if (!strcmp(serial, token)) {
+                                own = true;
+                                break;
+                        } else
+                                token = strtok(NULL, "\n"); /* Tokenize the same string */
+                }
+
+                /* Tokens are exhausted at this point */
+                free(built_ins_copy);
+
+                if (own)
+                        continue;
 
                 ret = sd_device_get_property_value(device, "ID_VENDOR_FROM_DATABASE", &vendor);
                 if (ret < 0)
@@ -143,6 +189,7 @@ int list(void)
         }
 
         sd_device_enumerator_unref(enumerator);
+        free(built_ins);
 
         return 0;
 }
