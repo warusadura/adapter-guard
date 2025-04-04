@@ -216,7 +216,7 @@ int dump(char *id)
                 const char *dev_type = NULL;
                 const char *revision = NULL;
                 const char *interfaces = NULL;
-                const char *other = NULL;
+                const char *id_path = NULL;
 
                 ret = sd_device_get_property_value(device, "DEVNAME", &dev_name);
                 if (ret < 0)
@@ -266,9 +266,9 @@ int dump(char *id)
                 if (!ret)
                         printf("   Interfaces: %s\n", interfaces);
 
-                ret = sd_device_get_property_value(device, "ID_NET_NAME_MAC", &other);
+                ret = sd_device_get_property_value(device, "ID_PATH", &id_path);
                 if (!ret)
-                        printf("   Other: %s\n", other);
+                        printf("   ID path: %s\n", id_path);
         }
 
         sd_device_enumerator_unref(enumerator);
@@ -323,7 +323,7 @@ int authenticate(char *id)
                         printf("   %s - %s - %s\n", vendor, model, serial);
                         printf("   \e[1mDevice verified as authentic\e[0m\n");
                 } else {
-                        printf("   \e[1mPotentially counterfeit device detected\e[0m\n");
+                        printf("   \e[1mPotentially counterfeit device detected. Remove immediately\e[0m\n");
                 }
         }
 
