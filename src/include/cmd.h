@@ -1,3 +1,6 @@
+#ifndef CMD
+#define CMD
+
 #define HELP "help"
 #define VERSION "version"
 #define LIST "list"
@@ -8,3 +11,5 @@
 
 void print_help();
 void print_version();
+
+#endif

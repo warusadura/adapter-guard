@@ -1,3 +1,6 @@
+#ifndef ADAPTER_GUARD
+#define ADAPTER_GUARD
+
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -14,3 +17,5 @@ int dump(char *id);
 sd_device_enumerator *usb_device_enumerator(void);
 int authenticate(char *id);
 int init(void);
+
+#endif
