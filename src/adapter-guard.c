@@ -196,6 +196,7 @@ int list(void)
 
 int dump(char *id)
 {
+        /* udevadm info --query=all --name=/dev/bus/usb/003/021 */
         sd_device_enumerator *enumerator = NULL;
         int ret;
         int counter = 0;
@@ -217,6 +218,12 @@ int dump(char *id)
                 const char *revision = NULL;
                 const char *interfaces = NULL;
                 const char *id_path = NULL;
+                const char *id_vendor = NULL;
+                const char *dev_path = NULL;
+                const char *sys_path = NULL;
+                const char *driver = NULL;
+                const char *bus_num = NULL;
+                const char *dev_num = NULL;
 
                 ret = sd_device_get_property_value(device, "DEVNAME", &dev_name);
                 if (ret < 0)
@@ -269,6 +276,30 @@ int dump(char *id)
                 ret = sd_device_get_property_value(device, "ID_PATH", &id_path);
                 if (!ret)
                         printf("   ID path: %s\n", id_path);
+
+                ret = sd_device_get_property_value(device, "ID_USB_VENDOR", &id_vendor);
+                if (!ret)
+                        printf("   ID vendor: %s\n", id_vendor);
+
+                ret = sd_device_get_property_value(device, "DEVPATH", &dev_path);
+                if (!ret)
+                        printf("   Device path: %s\n", dev_path);
+
+                ret = sd_device_get_syspath(device, &sys_path);
+                if (!ret)
+                        printf("   SYSFS path: %s\n", sys_path);
+
+                ret = sd_device_get_property_value(device, "DRIVER", &driver);
+                if (!ret)
+                        printf("   Driver: %s\n", driver);
+
+                ret = sd_device_get_property_value(device, "BUSNUM", &bus_num);
+                if (!ret)
+                        printf("   Bus number: %s\n", bus_num);
+
+                ret = sd_device_get_property_value(device, "DEVNUM", &dev_num);
+                if (!ret)
+                        printf("   Device number: %s\n", dev_num);
         }
 
         sd_device_enumerator_unref(enumerator);
