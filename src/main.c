@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "include/adapter-guard-scanner.h"
 #include "include/adapter-guard.h"
 #include "include/cmd.h"
 
@@ -35,8 +36,9 @@ int main(int argc, char *argv[])
                 if (argc != 3) {
                         fprintf(stderr, "Missing device id.\n\n");
                         printf("\e[1mUsage:\e[0m adapter-guard %s <id>\n", SCAN);
+                        return 1;
                 }
-                // todo
+                scan(argv[2]);
         } else {
                 fprintf(stderr, "Invalid command.\n");
                 print_help();

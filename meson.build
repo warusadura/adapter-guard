@@ -9,6 +9,7 @@ executable('adapter-guard',
   sources: [
     'src/cmd.c',
     'src/adapter-guard.c',
+    'src/adapter-guard-scanner.c',
     'src/main.c',
   ],
   dependencies: [
