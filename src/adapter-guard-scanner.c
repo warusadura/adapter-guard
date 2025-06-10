@@ -14,7 +14,12 @@ void flag_files(char *filename)
                                  ".zip", ".rar",  ".7z",  ".tar", ".gz",   ".xz",  ".img", ".tmp"};
 
         size_t num_formats = sizeof(formats) / sizeof(formats[0]);
+
         char *extension = strrchr(filename, '.');
+        if (!extension) {
+                printf("      Potential malicious file detected - \e[1m%s\e[0m\n", filename);
+                return;
+        }
 
         for (size_t i = 0; i < num_formats; i++) {
                 if (!strcmp(extension, formats[i])) {
@@ -24,9 +29,13 @@ void flag_files(char *filename)
         }
 }
 
-void list_content(const char *devname)
+void list_recursively(const char *path, bool got_full_path)
 {
         /* Assumes the device is already mounted */
+
+        if (got_full_path)
+                goto have_path;
+
         FILE *fp = setmntent("/proc/mounts", "r");
         if (!fp) {
                 perror("setmntent");
@@ -38,12 +47,19 @@ void list_content(const char *devname)
         char *mount_point = NULL;
 
         while ((ent = getmntent(fp)) != NULL) {
-                if (strcmp(ent->mnt_fsname, devname) == 0) {
+                if (strcmp(ent->mnt_fsname, path) == 0) {
                         mount_point = strdup(ent->mnt_dir);
                         printf("   Mass Storage detected. Scanning ...\n");
                         printf("   Detected %s\n", mount_point);
                 }
         }
+
+        if (fp)
+                endmntent(fp);
+
+have_path:
+        if (got_full_path)
+                mount_point = strdup(path);
 
         if (mount_point) {
                 DIR *dir = opendir(mount_point);
@@ -54,13 +70,25 @@ void list_content(const char *devname)
                 }
 
                 struct dirent *entry;
+                char full_path[PATH_MAX];
 
                 while ((entry = readdir(dir)) != NULL) {
-                        // Skip . and ..
+                        /* Skip . and .. */
                         if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
                                 continue;
 
-                        flag_files(entry->d_name);
+                        snprintf(full_path, PATH_MAX, "%s/%s", mount_point, entry->d_name);
+
+                        struct stat st;
+                        if (stat(full_path, &st) != 0) {
+                                perror("stat");
+                                continue;
+                        }
+
+                        if (S_ISDIR(st.st_mode))
+                                list_recursively(full_path, true);
+                        else if (S_ISREG(st.st_mode))
+                                flag_files(full_path);
                 }
 
                 closedir(dir);
@@ -69,8 +97,6 @@ void list_content(const char *devname)
 exit:
         if (mount_point)
                 free(mount_point);
-        if (fp)
-                endmntent(fp);
 }
 
 void scan_storage(sd_device *device)
@@ -90,7 +116,7 @@ void scan_storage(sd_device *device)
 
                 const char *devname = NULL;
                 if (sd_device_get_devname(block_device, &devname) >= 0 && devname)
-                        list_content(devname);
+                        list_recursively(devname, false);
         }
 
         sd_device_enumerator_unref(block_enumerator);
@@ -175,6 +201,8 @@ int scan(char *id)
                         if (!malicious_file_counter && !deep_scan_failed)
                                 printf(
                                     "   \e[1mNo potential malicious factors detected. Adapter is safe to use\e[0m\n");
+                        else
+                                printf("   \e[1mStorage access scan failed. Adapter could be malicious\e[0m\n");
                 }
         }
 
