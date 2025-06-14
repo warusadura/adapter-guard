@@ -327,7 +327,6 @@ int authenticate(char *id)
                 const char *dev_name = NULL;
                 const char *vendor = NULL;
                 const char *model = NULL;
-                const char *serial = NULL;
                 const char *serial_short = NULL;
 
                 ret = sd_device_get_property_value(device, "DEVNAME", &dev_name);
@@ -344,14 +343,10 @@ int authenticate(char *id)
 
                 sd_device_get_property_value(device, "ID_MODEL", &model);
                 sd_device_get_property_value(device, "ID_VENDOR_FROM_DATABASE", &vendor);
-                sd_device_get_property_value(device, "ID_SERIAL", &serial);
                 sd_device_get_property_value(device, "ID_SERIAL_SHORT", &serial_short);
 
                 if (vendor && model && serial_short) {
                         printf("   %s - %s - %s\n", vendor, model, serial_short);
-                        printf("   \e[1mDevice verified as authentic\e[0m\n");
-                } else if (vendor && model && serial) {
-                        printf("   %s - %s - %s\n", vendor, model, serial);
                         printf("   \e[1mDevice verified as authentic\e[0m\n");
                 } else {
                         printf("   \e[1mPotentially counterfeit device detected. Remove immediately\e[0m\n");
