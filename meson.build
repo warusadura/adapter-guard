@@ -19,3 +19,5 @@ executable('adapter-guard',
   install: true,
   install_dir: '/usr/bin',
 )
+
+subdir('src/test')

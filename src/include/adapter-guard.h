@@ -17,5 +17,6 @@ int dump(char *id);
 sd_device_enumerator *usb_device_enumerator(void);
 int authenticate(char *id);
 int init(void);
+char *read_from_built_ins(void);
 
 #endif
